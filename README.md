@@ -7,8 +7,7 @@ an external application.
 The container is parsed by hand (no third-party libraries):
 
 - **modern ZCF container**: a ZIP whose `content/root.dat` is a RIFF `CDR*`
-  object directory and `content/data/page1.dat` holds the payload stream
-  (cpu2.cdr-style files).
+  object directory and `content/data/page1.dat` holds the payload stream.
 - **legacy containers**: the `.cdr` file is itself a RIFF body (`CDR7`,
   `CDR8`), with inline leaf payloads. Very old files may compress the whole
   body into a top-level `LIST cmpr` (two zlib `CPng` streams).
@@ -19,8 +18,8 @@ The container is parsed by hand (no third-party libraries):
 python3 cdr2drawio.py <input.cdr> <output.drawio>
 ```
 
-Both arguments are optional; defaults are `cpu2.cdr` and `cpu2.drawio`. The
-diagram name is derived from the input filename.
+Both arguments are optional; the diagram name is derived from the input
+filename.
 
 ### Example
 
@@ -55,17 +54,27 @@ with the draw.io desktop CLI:
 - Legacy text uses the bounding-box height when no explicit font size is
   stored, and colours are not yet pulled from the legacy `otlt`/`stlt` style
   tables.
-- Text placement has a small vertical bias (`~30` svg units) on the cpu2
-  reference drawing.
+- Text placement has a small vertical bias (`~30` svg units).
 - `verify.py`/`verify2.py` still report a handful of element-level failures
   (e.g. a degenerate 3-unit connector) that predate this tool's feature work.
+
+## Roadmap
+
+- Fix the text-placement bias (~30 svg vertical offset; worst observed
+  centroid delta 139 svg).
+- Fix the `verify.py`/`verify2.py` element failures (including the degenerate
+  3-unit connector `e27`).
+- Generalize the verify scripts to work on any `.cdr`/`.drawio` instead of
+  hardcoded paths.
+- Tune legacy fidelity: real font sizes from `txsm_7`/doc styles and colours
+  from the `otlt`/`stlt` tables, validated against the DISP thumbnail.
+- Improve CMYK→RGB conversion for non-K100 colours.
 
 ## Files
 
 - `cdr2drawio.py` — the converter (single file, stdlib only).
 - `examples/` — sample legacy CDR7/CDR8 files (`Fig1_10`, `Fig13_3`,
   `Fig13_4`, `Fig13_23`).
-- `cpu2.drawio` / `cpu2_render.png` — reference conversion and render.
 - `verify.py` … `verify5.py`, `probe.py` — pixel-based verification helpers.
 
 ## Requirements
