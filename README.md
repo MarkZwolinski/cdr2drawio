@@ -56,7 +56,9 @@ macOS it is also available as
 - **Text**: labels from `txsm` (JSON on modern files, binary `txsm_7` on
   legacy files), including font name and size where available. CDR v6
   (`< 700`) uses the compact trailing character table (a char per 12-byte
-  cell after the fixed header).
+  cell after the fixed header); CDR v12 (`CDRC`, e.g. `Fig9_3`) places the
+  text at the tail as `[pad][u32 count][chars][NUL]` with `\r` line
+  separators — a tail scan recovers it.
 - **Colours**: Corel CMYK strings mapped to CSS hex. An additive ink-stacking
   model (`r = 1 − min(1, c+k)`, as in Ghostscript's default CMYK→RGB) is used
   for non-black combinations; pure K100 renders as Corel's rich black,
@@ -118,8 +120,9 @@ Baseline on `examples/cpu2.cdr` (all-K100 schematic):
 ## Files
 
 - `cdr2drawio.py` — the converter (single file, stdlib only).
-- `examples/` — sample legacy CDR6/7/8 files (`Fig1_10`, `Fig3_8`, `Fig13_3`,
-  `Fig13_4`, `Fig13_23`) and a modern CDR (2200) file (`cpu2.cdr`).
+- `examples/` — sample legacy CDR6/7/8/12 files (`Fig1_10`, `Fig3_8`,
+  `Fig9_3`, `Fig13_3`, `Fig13_4`, `Fig13_23`) and a modern CDR (2200)
+  file (`cpu2.cdr`).
 - `verify.py` … `verify5.py`, `verify_common.py`, `probe.py` — verification
   helpers.
 - `tools/extract_disp.py` — extract the embedded `DISP` preview bitmaps.

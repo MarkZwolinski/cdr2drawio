@@ -627,9 +627,30 @@ class Cdr:
                 if has_path:
                     o += num_chars * 24
             text = "\n".join(out)
-            return text, size, self.fonts.get(fid, "Arial")
+            if text:
+                return text, size, self.fonts.get(fid, "Arial")
         except (struct.error, IndexError):
-            return "", None, "Arial"
+            pass
+        return self._tail_txsm(seg)
+
+    def _tail_txsm(self, seg):
+        """Fallback for versions (e.g. v1200/CDRC) whose txsm layout differs:
+        the text sits at the tail as [pad][u32 count][chars][00], with lines
+        separated by \\r."""
+        L = len(seg)
+        for end in (L - 1, L):
+            if end < 5:
+                continue
+            if end == L - 1 and seg[L - 1] != 0:
+                continue
+            for count in range(min(250, end - 4), 1, -1):
+                q = end - count
+                if struct.unpack_from("<I", seg, q - 4)[0] == count:
+                    blk = bytes(seg[q:end])
+                    if all(b in (9, 10, 13) or 32 <= b < 127 for b in blk):
+                        return (blk.replace(b"\r", b"\n").decode("latin1"),
+                                None, "Arial")
+        return "", None, "Arial"
 
     def text_of_legacy(self, obj):
         t = self.find(obj, "txsm")
