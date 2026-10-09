@@ -778,8 +778,13 @@ def edge_cell(cid, pts, stroke, stroke_px, arrow_style):
 
 
 def main():
-    src = sys.argv[1] if len(sys.argv) > 1 else "cpu2.cdr"
-    dst = sys.argv[2] if len(sys.argv) > 2 else "cpu2.drawio"
+    if len(sys.argv) < 2:
+        sys.exit("usage: cdr2drawio.py <input> [output.drawio]")
+    src = sys.argv[1]
+    if not src.lower().endswith(".cdr"):
+        src += ".cdr"
+    dst = sys.argv[2] if len(sys.argv) > 2 else \
+        os.path.splitext(src)[0] + ".drawio"
     name = os.path.splitext(os.path.basename(src))[0]
     cdr = Cdr(src)
     stats = emit(cdr, dst, name)
