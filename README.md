@@ -47,9 +47,9 @@ macOS it is also available as
 
 ## What is supported
 
-Legacy formats seen in practice are all handled: **CDR6** (`Fig3_8`), **CDR7**,
-**CDR8**, **CDR12** (`CDRC` container, e.g. `Fig9_3`) and the ZIP-wrapped
-**ZCF** container (modern files such as `cpu2.cdr` and `Fig12_3.cdr`).
+Legacy formats seen in practice are all handled: **CDR6**, **CDR7**, **CDR8**,
+**CDR12** (`CDRC` container) and the ZIP-wrapped **ZCF** container used by
+modern files.
 
 - **Frame**: page bounding box placed on an A4 page (794 × 1123 px); Corel
   units are 1/10000 mm and map to draw.io px via `px = svg_units * 96 / 2540`.
