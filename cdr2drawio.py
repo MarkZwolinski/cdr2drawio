@@ -77,18 +77,24 @@ ARIAL = {
 
 
 def cmyk_to_hex(color):
-    """Convert a Corel 'CMYK,USER,c,m,y,k,...' string to #RRGGBB."""
+    """Convert a Corel 'CMYK,USER,c,m,y,k,...' string to #RRGGBB.
+
+    Uses an additive ink-stacking model (r = 1 - min(1, channel + k), as in
+    Ghostscript's default CMYK->RGB) instead of the naive per-channel
+    multiply, which darkens colours that combine CMYK with black. Pure K100
+    is Corel's rich black (COREL_BLACK)."""
     if not color:
         return COREL_BLACK
     parts = color.split(",")
     try:
         if parts[0] == "CMYK":
             c, m, y, k = (float(parts[i]) for i in (2, 3, 4, 5))
-            if c == 0 and m == 0 and y == 0 and k == 100:
+            if k >= 100 and c <= 0 and m <= 0 and y <= 0:
                 return COREL_BLACK  # Corel's rich black
-            r = round(255 * (1 - c / 100.0) * (1 - k / 100.0))
-            g = round(255 * (1 - m / 100.0) * (1 - k / 100.0))
-            b = round(255 * (1 - y / 100.0) * (1 - k / 100.0))
+            r = round(255 * (1 - min(100.0, c + k) / 100.0))
+            g = round(255 * (1 - min(100.0, m + k) / 100.0))
+            b = round(255 * (1 - min(100.0, y + k) / 100.0))
+            r = max(0, min(255, r)); g = max(0, min(255, g)); b = max(0, min(255, b))
             return "#%02X%02X%02X" % (r, g, b)
     except (ValueError, IndexError):
         pass
