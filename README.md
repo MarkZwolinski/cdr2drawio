@@ -29,14 +29,14 @@ argument; the diagram name is derived from the input filename.
 ### Example
 
 ```sh
-python3 cdr2drawio.py examples/Fig13_3.cdr Fig13_3.drawio
+python3 cdr2drawio.py examples/CDR7_Fig13_3.cdr CDR7_Fig13_3.drawio
 ```
 
 Open the `.drawio` file in [draw.io](https://app.diagrams.net) or render it
 from the command line:
 
 ```sh
-drawio --export --format png --scale 2 -o Fig13_3.png Fig13_3.drawio
+drawio --export --format png --scale 2 -o CDR7_Fig13_3.png CDR7_Fig13_3.drawio
 ```
 
 `drawio` is the cross-platform CLI that ships with the
@@ -47,25 +47,30 @@ macOS it is also available as
 
 ## What is supported
 
-Legacy formats seen in practice are all handled: **CDR6**, **CDR7**, **CDR8**,
-**CDR12** (`CDRC` container) and the ZIP-wrapped **ZCF** container used by
-modern files.
+Legacy formats seen in practice are all handled: **CDR5**, **CDR6**, **CDR7**,
+**CDR8**, **CDR9**, **CDRA**, **CDRB** and **CDR12** (`CDRC` container), plus
+the ZIP-wrapped **ZCF** container used by modern files. CDR5 keeps the object
+tree uncompressed and stores object coordinates in the 32-byte `obbx` chunk;
+CDR9/CDRA/CDRB compress the body into zlib `cmpr` streams like the late CDR8
+files (CDRB may also carry an `icccp` ICC colour profile).
 
 - **Frame**: page bounding box placed on an A4 page (794 × 1123 px); Corel
   units are 1/10000 mm and map to draw.io px via `px = svg_units * 96 / 2540`.
 - **Shapes**: polylines and polygons from the `loda` geometry, through the
   object's `trfd` affine transform; Bézier segments are sampled from their
   control points; rectangles and ellipses are drawn from their bounding box.
+  Grouped objects (nested `grp` containers) are walked and emitted like
+  top-level ones.
 - **Connectors**: endpoint pairs from `npps/ppdt` with arrowheads from the
   outline `leftArrow`/`rightArrow` flags.
 - **Text**: labels from `txsm` (JSON on modern files, binary `txsm_7` on
   legacy files), including font name and size where available. CDR v6
   (`< 700`) uses the compact trailing character table (a char per 12-byte
-  cell after the fixed header); CDR v12 (`CDRC`, e.g. `Fig9_3`) places the
+  cell after the fixed header); CDR v12 (`CDRC`, e.g. `CDR12_Fig9_3`) places the
   text at the tail as `[pad][u32 count][chars][NUL]` with `\r` line
   separators — a tail scan recovers it.
 - **Origin**: content is anchored at the page origin so off-page (negative)
-  coordinates in the source (e.g. `Fig9_3`) don't push shapes out of the
+  coordinates in the source (e.g. `CDR12_Fig9_3`) don't push shapes out of the
   viewport. Content that already sits on the page is left untouched.
 - **Colours**: Corel CMYK strings mapped to CSS hex. An additive ink-stacking
   model (`r = 1 − min(1, c+k)`, as in Ghostscript's default CMYK→RGB) is used
@@ -76,7 +81,7 @@ modern files.
 
 `verify.py` … `verify5.py` convert a `.drawio` back to a reference raster and
 compare it with the render and with a Corel thumbnail. Paths are CLI
-arguments (defaults point at regenerated `cpu2` artifacts):
+arguments (defaults point at regenerated `CDR2200_cpu2` artifacts):
 
 ```sh
 python3 verify.py                     # geometry checks: lines, rects, arrows, texts
@@ -90,7 +95,7 @@ content box is derived from the drawing unless `--content X0 Y0 X1 Y1` is
 given. `tools/extract_disp.py` pulls the embedded `DISP` preview bitmap out
 of any `.cdr` and writes a canonical RGB PNG.
 
-Baseline on `examples/cpu2.cdr` (all-K100 schematic):
+Baseline on `examples/CDR2200_cpu2.cdr` (all-K100 schematic):
 
 - `verify.py`: `FAILS: 0` (ink IoU 0.43 vs the Corel thumbnail). A degenerate
   3-svg-unit connector (`e27`) is skipped — it is smaller than a screen pixel.
@@ -103,10 +108,10 @@ Baseline on `examples/cpu2.cdr` (all-K100 schematic):
 - Legacy text still uses the bounding-box height when no explicit font size
   is stored, and no per-object CMYK colours are present in the tested CDR7/8
   files (their `otlt`/`outl` chunks hold binary attributes only).
-- The embedded `DISP` previews of the book-figure files (`Fig1_10` etc.) are
+- The embedded `DISP` previews of the book-figure files (`CDR8_Fig1_10` etc.) are
   not faithful renders of the drawing (a brute-force registration search tops
-  out near zero IoU), so mask-based comparisons are only run on `cpu2`. The
-  other figures verify via geometry checks (`verify.py` element checks) and
+  out near zero IoU), so mask-based comparisons are only run on `CDR2200_cpu2`.
+  The other figures verify via geometry checks (`verify.py` element checks) and
   rendered-output counts.
 - Text-centroid deltas vs the thumbnail are within its pixel quantization
   (1 thumb px ≈ 28 svg): observed `dy ≈ −15..−41 svg`, `dx ≤ ~50 svg`, plus a
@@ -123,9 +128,10 @@ Baseline on `examples/cpu2.cdr` (all-K100 schematic):
 ## Files
 
 - `cdr2drawio.py` — the converter (single file, stdlib only).
-- `examples/` — sample legacy CDR6/7/8/12 files (`Fig1_10`, `Fig3_8`,
-  `Fig9_3`, `Fig13_3`, `Fig13_4`, `Fig13_23`) and a modern CDR (2200)
-  file (`cpu2.cdr`).
+- `examples/` — one sample per supported format version, named with the
+  version prefix: `CDR5_dff`, `CDR6_Fig3_8`, `CDR7_Fig13_3`, `CDR8_Fig1_10`,
+  `CDR9_latch`, `CDRA_johnson`, `CDRB_funmode2`, `CDR12_Fig9_3` and a modern
+  ZCF file (`CDR2200_cpu2`).
 - `verify.py` … `verify5.py`, `verify_common.py`, `probe.py` — verification
   helpers.
 - `tools/extract_disp.py` — extract the embedded `DISP` preview bitmaps.

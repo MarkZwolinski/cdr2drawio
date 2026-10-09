@@ -150,7 +150,8 @@ class Cdr:
         self.fonts = self._read_fonts()
         self.objs = [
             n for n in self.nodes
-            if n["name"] == "LIST" and n["path"] == "/page/gobj/layr"
+            if n["name"] == "LIST"
+            and n["path"].startswith("/page/gobj/layr")
             and n["typ"].strip() in ("obj", "lnkg")
         ]
         self._set_transform()
@@ -280,8 +281,13 @@ class Cdr:
         return self.buf[chunk["off"]:chunk["off"] + n]
 
     def bbox(self, obj):
-        b = self.find(obj, "bbox")
-        x0, yt, x1, yb = struct.unpack_from("<4i", self.deref(b, 16))
+        # CDR5 (v<600) stores the 8-byte `bbox` chunk separately from the real
+        # coordinates, which live in the first 16 bytes of the 32-byte `obbx`.
+        b = self.find(obj, "obbx") if self.version < 600 else self.find(obj, "bbox")
+        raw = self.deref(b, 16)
+        if raw is None or len(raw) < 16:
+            return (0, 0, 0, 0)
+        x0, yt, x1, yb = struct.unpack_from("<4i", raw)
         xs, ys = sorted((self.sx(x0), self.sx(x1))), sorted((self.sy(yt), self.sy(yb)))
         return (round(xs[0]), round(ys[0]), round(xs[1]), round(ys[1]))
 
@@ -339,7 +345,10 @@ class Cdr:
             elif c == b"}":
                 depth -= 1
                 if depth == 0:
-                    return json.loads(seg[i:j + 1].decode("latin1"))
+                    try:
+                        return json.loads(seg[i:j + 1].decode("latin1"))
+                    except ValueError:
+                        return None
         return None
 
     def geometry(self, obj, box):
