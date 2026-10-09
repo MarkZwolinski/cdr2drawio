@@ -19,11 +19,12 @@ The container is parsed by hand (no third-party libraries):
 ## Usage
 
 ```sh
-python3 cdr2drawio.py <input.cdr> <output.drawio>
+python3 cdr2drawio.py <input> [output.drawio]
 ```
 
-Both arguments are optional; the diagram name is derived from the input
-filename.
+The input is required (a missing `.cdr` extension is appended). The output
+file defaults to `<input>.drawio` and can be overridden with the second
+argument; the diagram name is derived from the input filename.
 
 ### Example
 
@@ -45,6 +46,10 @@ macOS it is also available as
 `draw.io.exe`).
 
 ## What is supported
+
+Legacy formats seen in practice are all handled: **CDR6** (`Fig3_8`), **CDR7**,
+**CDR8**, **CDR12** (`CDRC` container, e.g. `Fig9_3`) and the ZIP-wrapped
+**ZCF** container (modern files such as `cpu2.cdr` and `Fig12_3.cdr`).
 
 - **Frame**: page bounding box placed on an A4 page (794 × 1123 px); Corel
   units are 1/10000 mm and map to draw.io px via `px = svg_units * 96 / 2540`.
@@ -111,11 +116,6 @@ Baseline on `examples/cpu2.cdr` (all-K100 schematic):
 
 ## Roadmap
 
-- ~~Fix the `verify.py`/`verify2.py` element failures (including the
-  degenerate 3-unit connector `e27`).~~
-- ~~Generalize the verify scripts to work on any `.cdr`/`.drawio` instead of
-  hardcoded paths.~~
-- ~~Improve CMYK→RGB conversion for non-K100 colours.~~
 - Tune legacy fidelity: real font sizes from `txsm_7`/doc styles and colours
   from the `otlt`/`stlt` tables, validated against a reliable reference
   render (the DISP previews of the current samples cannot be used for that).
