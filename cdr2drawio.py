@@ -696,11 +696,43 @@ def arial_width_em(s):
     return sum(ARIAL.get(c, 556) for c in s) / 1000.0
 
 
+def text_dims(box, text, size1e4):
+    """Text cell (w, h, cx, cy, font) from its bbox and parsed size."""
+    b0, b1, b2, b3 = box
+    F = size1e4 / 100.0 if size1e4 else (b3 - b1)
+    lines = text.split("\n")
+    natural = max(arial_width_em(l) for l in lines) * F
+    w = max(b2 - b0, natural) + 20
+    h = max(b3 - b1, len(lines) * 1.25 * F)
+    cx, cy = (b0 + b2) / 2.0, (b1 + b3) / 2.0
+    return w, h, cx, cy, F
+
+
 def emit(cdr, out_path, name="diagram"):
     cells = []
     stats = {"rect": 0, "poly": 0, "conn": 0, "text": 0}
+    # Anchor content at the page origin so off-page (negative) coordinates
+    # don't push the drawing out of the viewport. Content already on the
+    # page is left untouched.
+    PAD = 100.0
+    lefts, tops = [], []
+    for o in cdr.objs:
+        b = cdr.bbox(o)
+        lefts.append(b[0]); tops.append(b[1])
+        if cdr.find(o, "txsm") is not None:
+            t = cdr.text_of(o)
+            if t and t[0].strip():
+                w, h, cx, cy, _ = text_dims(b, t[0], t[1])
+                lefts.append(cx - w / 2.0)
+                tops.append(cy - h / 2.0)
+    minx = min(lefts) if lefts else 0.0
+    miny = min(tops) if tops else 0.0
+    dx = (PAD - minx) if minx < PAD else 0.0
+    dy = (PAD - miny) if miny < PAD else 0.0
     for n, obj in enumerate(cdr.objs):
         box = cdr.bbox(obj)
+        b0, b1, b2, b3 = (box[0] + dx, box[1] + dy,
+                          box[2] + dx, box[3] + dy)
         kind = obj["typ"].strip()
         style_json = Cdr.json_of(cdr.loda_segment(obj)) or {}
         outline = style_json.get("outline", {})
@@ -715,9 +747,9 @@ def emit(cdr, out_path, name="diagram"):
             stats["conn"] += 1
             ends = cdr.connector_points(obj)
             if ends:
-                pts = [ends[0], ends[1]]
+                pts = [(x + dx, y + dy) for x, y in ends]
             else:
-                pts = [(box[0], box[1]), (box[2], box[3])]
+                pts = [(b0, b1), (b2, b3)]
             if has_la and not has_ra:
                 pts = [pts[1], pts[0]]  # put the arrow tip at the end
             arrow = "endArrow=block;endFill=1;endSize=%s;" % ARROW_END_SIZE \
@@ -731,12 +763,7 @@ def emit(cdr, out_path, name="diagram"):
             if not text.strip():
                 continue
             # Legacy text has no explicit size; scale to the bbox height.
-            F = size1e4 / 100.0 if size1e4 else (box[3] - box[1])
-            lines = text.split("\n")
-            natural = max(arial_width_em(l) for l in lines) * F
-            w = max(box[2] - box[0], natural) + 20
-            h = max(box[3] - box[1], len(lines) * 1.25 * F)
-            cx, cy = (box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0
+            w, h, cx, cy, F = text_dims((b0, b1, b2, b3), text, size1e4)
             style = ("text;html=1;align=center;verticalAlign=middle;"
                      "fontSize=%d;fontFamily=%s;fontColor=%s;"
                      "fillColor=none;strokeColor=none;"
@@ -751,16 +778,16 @@ def emit(cdr, out_path, name="diagram"):
                 style = ("%swhiteSpace=wrap;html=1;fillColor=none;"
                          "strokeColor=%s;strokeWidth=%s;" % (shape, stroke, stroke_px))
                 cells.append(vertex_cell("s%d" % n, "", style,
-                                         box[0], box[1], box[2] - box[0],
-                                         box[3] - box[1]))
+                                         b0, b1, b2 - b0, b3 - b1))
             else:
                 stats["poly"] += 1
                 start = "startArrow=block;startFill=1;startSize=%s;" % \
                     ARROW_END_SIZE if has_la else "startArrow=none;"
                 end = "endArrow=block;endFill=1;endSize=%s;" % \
                     ARROW_END_SIZE if has_ra else "endArrow=none;"
-                cells.append(edge_cell("s%d" % n, pts, stroke, stroke_px,
-                                       start + end))
+                cells.append(edge_cell("s%d" % n,
+                                       [(x + dx, y + dy) for x, y in pts],
+                                       stroke, stroke_px, start + end))
 
     xml = []
     xml.append('<mxfile host="app.diagrams.net" type="device">')

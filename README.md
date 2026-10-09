@@ -59,6 +59,9 @@ macOS it is also available as
   cell after the fixed header); CDR v12 (`CDRC`, e.g. `Fig9_3`) places the
   text at the tail as `[pad][u32 count][chars][NUL]` with `\r` line
   separators — a tail scan recovers it.
+- **Origin**: content is anchored at the page origin so off-page (negative)
+  coordinates in the source (e.g. `Fig9_3`) don't push shapes out of the
+  viewport. Content that already sits on the page is left untouched.
 - **Colours**: Corel CMYK strings mapped to CSS hex. An additive ink-stacking
   model (`r = 1 − min(1, c+k)`, as in Ghostscript's default CMYK→RGB) is used
   for non-black combinations; pure K100 renders as Corel's rich black,
