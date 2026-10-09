@@ -535,6 +535,20 @@ class Cdr:
     def _txsm7(self, seg):
         """Parse a legacy txsm (versions 700..1599); return text, size, font."""
         v = self.version
+        if v < 700:
+            # compact v6 layout: [160-byte header] [u32 count][u32 pad]
+            # followed by count 12-byte cells, each starting with a char.
+            try:
+                if len(seg) >= 168:
+                    count = struct.unpack_from("<I", seg, 160)[0]
+                    if 1 <= count <= 256 and len(seg) == 168 + 12 * count:
+                        raw = bytes(seg[168 + 12 * i] for i in range(count))
+                        if all(c == 9 or 32 <= c < 127 for c in raw):
+                            return raw.decode("latin1"), None, self.fonts.get(
+                                13, "Arial")
+            except (struct.error, IndexError):
+                pass
+            return "", None, "Arial"
         try:
             o = 0
             frame_flag = struct.unpack_from("<I", seg, o)[0] != 0
